@@ -1,0 +1,59 @@
+# Secrets — never committed
+.env
+.env.*
+!.env.example
+
+# The toolkit's own git repo, nested inside this project.
+# Ignoring this keeps the two repos from interfering.
+.claude/.git/
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Poetry — lock file IS committed; only local config is ignored
+poetry.toml
+
+# Testing and coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.tox/
+
+# Type checking and linting caches
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs and local scratch
+*.log
+logs/
+scratch/
+tmp/
+
+# Alembic — versions ARE committed. Nothing here is ignored by default.
+# Do not add alembic/versions/ to this file.

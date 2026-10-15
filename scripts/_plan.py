@@ -38,7 +38,7 @@ ID_PATTERNS = {
     "ERR": re.compile(r"^ERR-\d{3,}$"),
 }
 
-# Width used when minting a new ID. PH is deliberately unpadded.
+# Zero-padding width when minting a new ID. PH is deliberately unpadded.
 ID_WIDTH = {
     "REQ": 3, "US": 3, "EP": 3, "DEC": 3,
     "Q": 3, "CR": 3, "ERR": 3, "PH": 0,
@@ -48,6 +48,9 @@ ANY_ID = re.compile(r"\b(REQ|PH|US|EP|DEC|Q|CR|ERR)-\d+\b")
 
 # Entries in the flat multi-entry files are delimited by a heading.
 HEADING_ID = re.compile(r"^###\s+([A-Z]+-\d+)\s*$", re.MULTILINE)
+
+# Fenced code blocks hold documented examples, not real data.
+CODE_FENCE = re.compile(r"```.*?```", re.DOTALL)
 
 # Files that are templates, not real plan entries.
 TEMPLATE_NAMES = {"_template.md"}
@@ -71,6 +74,17 @@ ENDPOINT_STATUSES = {
 }
 
 
+def strip_code_blocks(text: str) -> str:
+    """Remove fenced blocks.
+
+    Every plan file documents its own entry format inside a fenced block.
+    Without this, that documentation is read as data — the format example
+    `### REQ-001` becomes a requirement that does not exist, and the ID
+    allocator starts counting from 2 on an empty project.
+    """
+    return CODE_FENCE.sub("", text)
+
+
 # --------------------------------------------------------------------------
 # Frontmatter
 # --------------------------------------------------------------------------
@@ -82,9 +96,8 @@ class FrontmatterError(Exception):
 def parse_frontmatter(text: str) -> dict[str, object]:
     """Parse flat YAML-ish frontmatter into a dict.
 
-    Values are returned as str, bool, or list[str]. Anything the flat
-    format does not support raises FrontmatterError rather than being
-    silently mangled.
+    Values come back as str, bool, or list[str]. Anything the flat format
+    does not support raises rather than being silently mangled.
     """
     lines = text.splitlines()
     if not lines or lines[0].strip() != "---":
@@ -286,19 +299,24 @@ def _load_statused(path: Path) -> dict[str, str]:
     """Read `### ID` entries from a flat multi-entry file, with their status."""
     if not path.is_file():
         return {}
-    text = path.read_text(encoding="utf-8")
-    text = re.sub(r"```.*?```", "", text, flags=re.DOTALL)
+    text = strip_code_blocks(path.read_text(encoding="utf-8"))
     found: dict[str, str] = {}
     matches = list(HEADING_ID.finditer(text))
     for i, match in enumerate(matches):
         entry_id = match.group(1)
         end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
         chunk = text[match.end():end]
-        status_match = re.search(
-            r"^\*\*Status:\*\*\s*(\S+)", chunk, re.MULTILINE
-        )
+        status_match = re.search(r"^\*\*Status:\*\*\s*(\S+)", chunk, re.MULTILINE)
         found[entry_id] = status_match.group(1).lower() if status_match else "unknown"
     return found
+
+
+def read_stripped(path: Path) -> str:
+    """Read a markdown file with fenced blocks removed. Empty on failure."""
+    try:
+        return strip_code_blocks(path.read_text(encoding="utf-8"))
+    except (UnicodeDecodeError, OSError):
+        return ""
 
 
 def referenced_ids(text: str) -> set[str]:

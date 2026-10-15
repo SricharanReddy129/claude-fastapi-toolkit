@@ -287,6 +287,7 @@ def _load_statused(path: Path) -> dict[str, str]:
     if not path.is_file():
         return {}
     text = path.read_text(encoding="utf-8")
+    text = re.sub(r"```.*?```", "", text, flags=re.DOTALL)
     found: dict[str, str] = {}
     matches = list(HEADING_ID.finditer(text))
     for i, match in enumerate(matches):

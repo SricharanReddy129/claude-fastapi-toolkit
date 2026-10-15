@@ -16,6 +16,9 @@ IDs are permanent and never reused — see .claude/skills/plan-file-format.md.
 This script therefore allocates strictly above the highest ID ever seen,
 including ones belonging to removed or deferred items. It never fills a gap.
 
+Fenced code blocks are stripped before scanning, so the format examples
+documented inside each plan file are not mistaken for real entries.
+
 Usage:
     python .claude/scripts/id_allocator.py EP
     python .claude/scripts/id_allocator.py REQ --count 5
@@ -34,56 +37,40 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _plan import (  # noqa: E402
     ID_PATTERNS,
     ID_WIDTH,
+    TEMPLATE_NAMES,
     find_project_root,
     load_plan,
+    read_stripped,
 )
 
-# Where each ID type lives, for scanning purposes.
-SOURCES = {
-    "REQ": [("requirements",)],
-    "PH": [("phases",)],
-    "US": [("stories",)],
-    "EP": [("endpoints",)],
-    "CR": [("changes",)],
-    "DEC": [("decisions",)],
-    "Q": [("questions",)],
-    "ERR": [("errors",)],
-}
+# Endpoint and error IDs also appear in contracts.
+SCANS_CONTRACTS = {"EP", "ERR"}
 
 
 def highest_seen(root: Path, prefix: str) -> int:
-    """Highest numeric suffix for this prefix anywhere under plan/.
+    """Highest numeric suffix for this prefix anywhere in the project.
 
-    Scans the raw text of every plan file rather than only parsed IDs, so an
-    ID mentioned in a changelog or a removed entry still counts. Reusing an
-    ID would silently repoint historical references.
+    Scans raw text rather than only parsed IDs, so an ID mentioned in a
+    changelog or in a removed entry still counts. Reusing an ID would
+    silently repoint historical references.
     """
     pattern = re.compile(rf"\b{prefix}-(\d+)\b")
     highest = 0
+
     plan_dir = root / "plan"
-    if not plan_dir.is_dir():
-        return 0
-
-    for path in plan_dir.rglob("*.md"):
-        if path.name == "_template.md":
-            continue
-        try:
-            text = path.read_text(encoding="utf-8")
-        except (UnicodeDecodeError, OSError):
-            continue
-        for match in pattern.finditer(text):
-            highest = max(highest, int(match.group(1)))
-
-    # Contracts reference endpoint and error IDs too.
-    contracts = root / "contracts"
-    if contracts.is_dir() and prefix in ("EP", "ERR"):
-        for path in contracts.rglob("*.md"):
-            try:
-                text = path.read_text(encoding="utf-8")
-            except (UnicodeDecodeError, OSError):
+    if plan_dir.is_dir():
+        for path in plan_dir.rglob("*.md"):
+            if path.name in TEMPLATE_NAMES:
                 continue
-            for match in pattern.finditer(text):
+            for match in pattern.finditer(read_stripped(path)):
                 highest = max(highest, int(match.group(1)))
+
+    if prefix in SCANS_CONTRACTS:
+        contracts = root / "contracts"
+        if contracts.is_dir():
+            for path in contracts.rglob("*.md"):
+                for match in pattern.finditer(read_stripped(path)):
+                    highest = max(highest, int(match.group(1)))
 
     return highest
 

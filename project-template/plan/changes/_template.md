@@ -1,36 +1,50 @@
-# CR-### — <short title>
+---
+id: CR-000
+type: change-request
+date: YYYY-MM-DD
+requirement: REQ-000
+status: proposed
+classification: additive
+stories: []
+endpoints: []
+contracts: []
+decisions: []
+---
 
-**Type:** change-request
-**Date:** YYYY-MM-DD
-**Requirement:** REQ-###
-**Status:** proposed | approved | applied
+# CR-000 — <short title>
 
-**What changed:** <the new requirement text or the nature of the change>
+## What changed
+
+<The new requirement text, verbatim where possible, or the nature of the change.>
 
 ## Impact
 
-| Affected | IDs |
-|---|---|
-| Stories | US-### |
-| Endpoints | EP-### (status at time of change) |
-| Contracts | <paths> |
-| Tests | <paths> |
-| Error codes | ERR-### added / deprecated |
+| Affected | IDs / paths | Status at time of change |
+|---|---|---|
+| Stories | US-### | |
+| Endpoints | EP-### | |
+| Contracts | contracts/... | |
+| Tests | tests/... | |
+| Error codes | ERR-### added / deprecated | |
 
 ## Classification
 
-| Contract | Change | Class |
+| Contract | What changed | Class |
 |---|---|---|
-| <path> | <what changed> | additive / **breaking** |
+| contracts/... | | additive / **breaking** |
 
-*When unsure, classify as breaking. Being wrong that way costs a conversation;
-the other way breaks a frontend.*
+<!--
+When unsure, classify as breaking. Being wrong that way costs a
+conversation; the other way breaks a frontend.
+-->
 
 ## Decision
 
-**Approved by:** <who> on YYYY-MM-DD
+**Approved:** <who> on YYYY-MM-DD
+
 **For breaking changes:** version the endpoint | coordinate with the consumer
-**Reasoning:** <why — DEC-### logged separately>
+
+**Reasoning:** <why — logged separately as DEC-###>
 
 ## Applied
 
@@ -42,3 +56,10 @@ the other way breaks a frontend.*
 - [ ] Endpoints marked needs-rebuild
 - [ ] Story marked incomplete
 - [ ] DEC-### logged
+
+<!--
+status: proposed | approved | applied
+classification: additive | breaking  (breaking if ANY contract change is)
+stories / endpoints / contracts / decisions: what this CR touched.
+Filled in as the change is applied.
+-->

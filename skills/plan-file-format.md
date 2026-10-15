@@ -1,6 +1,7 @@
 # Skill: plan-file-format
 
-**Tier:** invariant — IDs, link direction, generated indexes, single-source status
+**Tier:** invariant — IDs, link direction, generated indexes, single-source
+status, frontmatter shape
 **Read when:** creating or editing anything under `plan/`.
 
 **References**
@@ -8,10 +9,31 @@
 - Related: `.claude/skills/requirement-decomposition.md`,
   `.claude/skills/contract-authoring.md`
 - Calls: `.claude/scripts/id_allocator.py`,
-  `.claude/scripts/regen_indexes.py`,
-  `.claude/scripts/check_links.py`
-- Called by: every planning command
+  `.claude/scripts/regen_indexes.py`, `.claude/scripts/check_links.py`
+- Templates: `plan/phases/_template.md`, `plan/stories/_template.md`,
+  `plan/endpoints/_template.md`, `plan/changes/_template.md`
 - Enforced by: hook `on_plan_edit`
+
+---
+
+## Frontmatter *(invariant)*
+
+Every leaf plan file opens with YAML frontmatter between `---` markers. This is
+the machine-readable part; prose goes below it.
+
+**The format is deliberately flat**, because the scripts that parse it are
+stdlib-only and cannot import a YAML library:
+
+- One `key: value` per line
+- Lists are bracketed and comma-separated: `[REQ-001, REQ-002]`
+- Empty lists are `[]`
+- **No nesting, no multi-line values, no anchors, no quoting needed**
+- Values containing a comma must not be used in a list field
+
+A file whose frontmatter does not parse fails `check_links.py`. If something
+does not fit the flat format, it belongs in the prose below, not in a key.
+
+Start from the templates rather than writing frontmatter by hand.
 
 ---
 
@@ -41,16 +63,14 @@ concurrent assignment produces duplicates.
 
 ## Links point upward only *(invariant)*
 
-Each file declares its **parents**. Children are never hand-listed.
+Each file declares its **parents** in frontmatter. Children are never listed.
 
-| File | Declares |
+| File | Upward keys |
 |---|---|
-| Endpoint | parent story, requirement IDs |
-| Story | parent phase, requirement IDs |
-| Phase | nothing upward |
-| Decision | what it affects |
-| Change request | what it touched |
-| Error code | originating requirement or story |
+| Endpoint | `story`, `requirements` |
+| Story | `phase`, `requirements` |
+| Phase | none |
+| Change request | `requirement`, plus what it touched |
 
 **Why:** upward links are written once at creation and stay true forever.
 Downward links need updating on every addition, and eventually one update is
@@ -64,8 +84,8 @@ disposable.**
 
 ## Generated indexes *(invariant)*
 
-Everything under `plan/generated/` is produced by
-`.claude/scripts/regen_indexes.py` by scanning upward declarations.
+Everything in `plan/generated/` is produced by
+`.claude/scripts/regen_indexes.py` by scanning frontmatter.
 
 **Never hand-edited.** The hook regenerates after any plan edit and fails if the
 committed index does not match a fresh scan.
@@ -80,53 +100,46 @@ story.
 
 | Thing | Status owner |
 |---|---|
-| Endpoint | its own file |
+| Endpoint | its own frontmatter |
 | Story | **derived** from its endpoints |
 | Phase | **derived** from its stories |
 | Requirement | its own entry — active, deferred, removed |
 
-Never hand-maintain a derived status. `/status` reads real state only because
+Never hand-edit a derived status. `/status` reads real state only because
 nothing is hand-maintained.
 
-**Endpoint statuses:** planned · contracted · tests-written · building · done ·
-needs-rebuild.
+**Endpoint statuses:** `planned` · `contracted` · `tests-written` · `building` ·
+`done` · `needs-rebuild`.
 
 `needs-rebuild` is set by `/change-request` and is what stops a changed endpoint
-from being counted as complete.
+from counting as complete.
 
 ---
 
-## The link block
+## Frontmatter keys by file type
 
-Every plan file opens with a fixed, machine-parseable block — ID, type, parents,
-status, related IDs. It is the first thing read and the only part most lookups
-need.
+**Phase** — `id`, `type`, `status`, `name`
 
-Keep it to identifiers and status. Prose goes below it.
+**Story** — `id`, `type`, `phase`, `requirements`, `status`, `questions`, `name`
+
+**Endpoint** — `id`, `type`, `story`, `requirements`, `status`, `method`,
+`path`, `contract`, `permission`, `tenant_scoped`, `idempotency_key`, `errors`,
+`decisions`, `questions`
+
+**Change request** — `id`, `type`, `date`, `requirement`, `status`,
+`classification`, `stories`, `endpoints`, `contracts`, `decisions`
+
+Keys are never omitted. An empty list is `[]`; an unknown value is the
+placeholder from the template.
 
 ---
 
-## File contents
+## Flat files
 
-**Endpoint** — ID · method and path · parent story · requirement IDs · status ·
-contract path · related decisions, questions, error codes · notes
-
-**Story** — ID · parent phase · requirement IDs · status · goal · points at the
-generated endpoint list, never an inline one
-
-**Phase** — ID · status · goal · entry and exit criteria
-
-**Requirement** — ID · **verbatim source text** · source location · status ·
-changelog of every CR that touched it
-
-**Decision** — ID · date · what was decided · why · alternatives rejected ·
-what it affects
-
-**Question** — ID · what it blocks · raised date · resolution pointing at a
-decision ID
-
-Verbatim source text matters: paraphrasing a requirement loses the thing you
-need when someone asks where a rule came from.
+`plan/requirements/inventory.md`, `plan/questions.md`, `plan/decisions.md`, and
+`plan/errors.md` hold many entries in one file and use **heading-delimited
+entries**, not frontmatter. Each entry starts with `### <ID>` and follows the
+format documented at the top of its file.
 
 ---
 
@@ -135,14 +148,15 @@ need when someone asks where a rule came from.
 ```
 plan/
 ├── index.md                    # phases + current position. SHORT
-├── requirements/inventory.md   # all REQ entries
+├── project-config.md           # roles, tenancy, project choices
+├── requirements/inventory.md
 ├── phases/PH-#.md
 ├── stories/US-###.md
 ├── endpoints/EP-###.md
 ├── changes/CR-###.md
-├── decisions.md                # DEC entries
-├── questions.md                # Q entries
-├── errors.md                   # ERR registry
+├── decisions.md
+├── questions.md
+├── errors.md
 └── generated/                  # never hand-edited
 ```
 
@@ -151,7 +165,7 @@ they are the frontend's artifact.
 
 ---
 
-## Context discipline *(invariant in spirit)*
+## Context discipline
 
 **Small indexes, detailed leaves, load on demand.**
 
@@ -163,8 +177,7 @@ only the affected files.
 
 **Neither path ever loads the full source document or unrelated phases.**
 
-`plan/index.md` must stay short enough to read on every command. Anything long
-belongs in a leaf.
+`plan/index.md` must stay short enough to read on every command.
 
 ---
 
@@ -172,26 +185,26 @@ belongs in a leaf.
 
 `.claude/scripts/check_links.py` verifies:
 
+- Frontmatter parses in every leaf file
+- Every required key is present
 - Every referenced ID exists
 - No ID appears twice
 - Every active requirement is claimed by a story, or explicitly deferred
 - Every endpoint belongs to a story that belongs to a phase
 - Generated indexes match a fresh scan
-- Nothing marked done has unresolved questions attached
+- Nothing marked `done` has unresolved questions attached
 - Every toolkit cross-reference path resolves
-
-A broken link is a failing check, not a surprise three weeks later.
 
 ---
 
 ## Writing rules
 
-- **Never delete a requirement.** Mark it deferred or removed with a date and a
-  reason. Deleting means the same argument gets relitigated with no record
+- **Never delete a requirement.** Mark deferred or removed with a date and
+  reason
 - **Never renumber.** See `docs/decisions.md` TD-026
 - **No secrets** — plan files are committed
-- **Open questions are written to `plan/questions.md`**, not merely spoken. A
-  question that exists only in a conversation does not survive compaction
+- **Open questions go to `plan/questions.md`**, not merely spoken. A question
+  that exists only in conversation does not survive compaction
 - Every cross-reference is a repo-relative path or an ID, never a bare name
 
 ---
@@ -203,7 +216,9 @@ A broken link is a failing check, not a surprise three weeks later.
 | Endpoint list typed into a story file | Point at the generated index |
 | Hand-assigned ID | Use `id_allocator.py` |
 | Story status hand-edited | Derived from endpoints |
-| Requirement paraphrased instead of quoted | Keep verbatim text |
+| Nested or multi-line frontmatter | Flatten it, or move to prose |
+| Missing frontmatter key | Every key is always present; `[]` for empty |
+| Requirement paraphrased | Keep verbatim text |
 | Requirement deleted | Mark removed with a reason |
 | Generated file edited | Regenerate |
 | Question raised in chat only | Write it to `plan/questions.md` |
@@ -213,5 +228,5 @@ A broken link is a failing check, not a surprise three weeks later.
 
 ## No overrides
 
-Nothing here is overridable. The format is what makes the plan machine-checkable;
-a project-specific variant would break the scripts.
+Nothing here is overridable. The format is what makes the plan
+machine-checkable; a project-specific variant would break the scripts.

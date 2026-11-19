@@ -1,5 +1,5 @@
 ---
-description: Build a story's endpoints one at a time, bottom-up, running tests at each layer.
+description: Build a story's endpoints one at a time, bottom-up, running that endpoint's tests at each layer.
 argument-hint: <US-###> | <EP-###>
 ---
 
@@ -44,6 +44,25 @@ Missing any of these means `/plan-story` has not run. Stop and say so.
 
 ---
 
+## Test scope — this endpoint only
+
+**Never run the full suite during a build.** Run only the tests for the
+endpoint being built, selected by path or `-k`.
+
+Building EP-003's DAL does not need EP-001's router tests, and it certainly
+does not need another story's. The full suite is `/verify-story`'s job, and it
+runs there once.
+
+**First pass is terse:** `-x --tb=line`. Stop at the first failure, one line
+per failure. Fifteen tracebacks nobody has read yet are pure cost.
+
+**Only then re-run the single failing test** with `--tb=short` for detail.
+
+Run the whole story's tests exactly once, at the end of the last endpoint,
+before handing over to `/verify-story`.
+
+---
+
 ## Per-endpoint sequence
 
 Announce each step — one line, prefixed with the `EP-###`.
@@ -51,12 +70,13 @@ Announce each step — one line, prefixed with the `EP-###`.
 1. **Model** — table, relationships, tenant column, soft-delete flag
 2. **Migration** — autogenerate, **review line by line**, apply, test the
    downgrade
-3. **DAL** — tenant filter, soft-delete filter, cursor pagination. Run DAL tests
-4. **Service** — business logic, registry errors, injected session. Run service
-   unit tests
-5. **Router** — thin, permission-bound, response model. Run integration and
-   contract tests
-6. **Contract check** — `contract_diff.py`. Any drift is a stop
+3. **DAL** — tenant filter, soft-delete filter, cursor pagination. Run **this
+   endpoint's** DAL tests
+4. **Service** — business logic, registry errors, injected session. Run **this
+   endpoint's** service unit tests
+5. **Router** — thin, permission-bound, response model. Run **this endpoint's**
+   integration and contract tests
+6. **Contract check** — `contract_diff.py --story <US-###>`. Any drift is a stop
 7. **Mark** the endpoint `done`, run `regen_indexes.py`, move to the next
 
 No pause between layers when things pass. Halt immediately when they do not.
@@ -107,6 +127,11 @@ Write every stop to `plan/questions.md` before reporting.
 
 ## Do not
 
+- **Run the full test suite** — that is `/verify-story`. Run only the tests for
+  the endpoint being built
+- **Re-run passing tests** from an endpoint already marked done
+- **Print full tracebacks for failures you have not diagnosed** — first pass is
+  `-x --tb=line`
 - Build horizontally — all DALs, then all services
 - Batch migrations to the end of the story
 - Edit a test to make it pass

@@ -779,7 +779,8 @@ nothing silently disappears.
 4. `/build-endpoint <story>` — works through endpoints **one at a time, fully
    complete before the next**:
    - model → migration → DAL → service → router
-   - tests run at each layer; halt on failure (§10.8)
+   - tests run at each layer, that endpoint's tests only; the full suite
+     runs once, at `/verify-story`. Halt on failure (§10.8)
 5. Next endpoint
 6. `/verify-story` when all endpoints pass
 
@@ -1134,3 +1135,4 @@ Scripts and hooks first because they are what make everything else trustworthy.
 | Date | Change | Reason |
 |---|---|---|
 | — | Initial specification | — |
+| 2026-11-19 | `/build-endpoint` runs only the current endpoint's tests, with a terse first pass (`-x --tb=line`); the full suite runs once, at `/verify-story` (§13.3) | The full suite repeated at every layer is slow and wasteful |

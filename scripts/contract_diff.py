@@ -184,6 +184,8 @@ def statuses_of(operation: dict) -> set[int]:
 def compare(
     contracts: dict[tuple[str, str], dict],
     routes: dict[tuple[str, str], dict],
+    *,
+    filtered: bool = False,
 ) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     warnings: list[str] = []
@@ -230,6 +232,11 @@ def compare(
                         f"{rel}: contract declares {want} but the app "
                         f"does not document it on {label}"
                     )
+
+    # Only meaningful over the whole contract set. With --story the contracts
+    # are filtered, so every other story's routes would look uncontracted.
+    if filtered:
+        return errors, warnings
 
     for key in sorted(routes):
         method, path = key
@@ -295,7 +302,7 @@ def main() -> int:
         contracts = filter_to_story(root, contracts, args.story)
 
     routes = routes_from_spec(spec)
-    errors, warnings = compare(contracts, routes)
+    errors, warnings = compare(contracts, routes, filtered=bool(args.story))
     errors = problems + errors
 
     if errors:

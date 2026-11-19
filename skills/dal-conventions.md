@@ -38,6 +38,21 @@ in a clearly named function marked as cross-tenant, and the reason is recorded
 in `plan/decisions.md`. It is never the default shape of a function that also
 serves tenant callers.
 
+### Platform tables
+
+A table with no `tenant_id` at all — global identity, sessions, system
+configuration — is a platform table, not a cross-tenant exception. Each
+function on one carries `platform_table` in its docstring, and the reason is
+recorded in `plan/decisions.md`.
+
+The distinction matters. `cross_tenant` means a tenant-scoped table read
+deliberately across tenants, which is rare and worth seeing in the output.
+Using it for tables that have no tenant column floods that signal with noise
+until nobody reads it.
+
+`dal_guard.py` skips the tenant and soft-delete checks for a `platform_table`
+function, silently.
+
 ---
 
 ## What a DAL function does
@@ -161,6 +176,7 @@ cannot be called by accident.
 | Unbounded limit | Enforce a maximum |
 | DAL function called in a loop | Write a function that fetches the set |
 | Soft-delete filter missing on a join | Apply it to every scoped table in the query, including joined ones |
+| `cross_tenant` used on a table with no tenant column | Use `platform_table` |
 
 ---
 

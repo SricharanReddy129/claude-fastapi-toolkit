@@ -206,6 +206,9 @@ only the affected files.
 - **Open questions go to `plan/questions.md`**, not merely spoken. A question
   that exists only in conversation does not survive compaction
 - Every cross-reference is a repo-relative path or an ID, never a bare name
+- **Edit plan files with the Edit tool**, never with scripted string surgery.
+  A script doing index arithmetic on markdown truncates the file when an index
+  is off, and the loss is silent — it looks like a successful write
 
 ---
 
@@ -223,7 +226,7 @@ only the affected files.
 | Generated file edited | Regenerate |
 | Question raised in chat only | Write it to `plan/questions.md` |
 | `plan/index.md` grown long | Move detail to leaves |
-
+| Plan file edited by a script doing string slicing | Use the Edit tool |
 ---
 
 ## No overrides

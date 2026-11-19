@@ -88,6 +88,10 @@ def load_spec_from_app(root: Path, target: str) -> dict:
     app = getattr(module, attr, None)
     if app is None:
         raise SystemExit(f"ERROR: '{module_name}' has no attribute '{attr}'")
+    # Accept a factory as well as an instance: app.main:create_app is the
+    # common FastAPI pattern.
+    if callable(app) and not hasattr(app, "openapi"):
+        app = app()
 
     openapi = getattr(app, "openapi", None)
     if not callable(openapi):
@@ -229,7 +233,7 @@ def compare(
 
     for key in sorted(routes):
         method, path = key
-        if path.startswith(("/docs", "/redoc", "/openapi")):
+        if path.startswith(("/docs", "/redoc", "/openapi", "/health", "/metrics", "/ready", "/live")):
             continue
         if key not in contracts:
             errors.append(

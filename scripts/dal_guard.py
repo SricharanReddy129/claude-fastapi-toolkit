@@ -171,6 +171,14 @@ def check_dal(path: Path, rel: str, tree: ast.AST) -> list[Finding]:
         if not is_query_function(node):
             continue
 
+        docstring = (ast.get_docstring(node) or "").lower()
+
+        # A table with no tenant column at all — platform-level identity,
+        # sessions, system config. Different from cross_tenant, which means a
+        # tenant-scoped table read deliberately across tenants.
+        if "platform_table" in docstring:
+            continue
+        
         if node.name.lower().startswith("cross_tenant") or "cross_tenant" in (
             ast.get_docstring(node) or ""
         ).lower():

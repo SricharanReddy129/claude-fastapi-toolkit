@@ -3,9 +3,11 @@
 .env.*
 !.env.example
 
-# The toolkit's own git repo, nested inside this project.
-# Ignoring this keeps the two repos from interfering.
-.claude/.git/
+# The toolkit is its own repo, cloned into .claude/. The project never tracks
+# it — not its files, and not as a gitlink. Ignoring only .claude/.git/ is not
+# enough: git still sees the nested repo and records a phantom submodule
+# pointer that nothing can resolve.
+.claude/
 
 # Python
 __pycache__/
@@ -37,6 +39,10 @@ coverage.xml
 .mypy_cache/
 .ruff_cache/
 .dmypy.json
+
+# JWT signing keys — never committed
+keys/
+*.pem
 
 # IDEs
 .idea/
